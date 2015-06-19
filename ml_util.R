@@ -212,24 +212,28 @@ plot.imp <- function (imp, tax.16s, topImp=10, ...) {
     x <- imp$importance
     x <- x[order(-x[1]), , drop=F]
     taxId <- rev(gsub("`+", "", rownames(x)[1:topImp]))
-    taxImp <- tax.16s[taxId]
-    ## this axis function will enable the tax ID to plot on the left side
-    ## of y axis and tax string on the right side.
-    axis.sigmasq <- function(side, ...) {
-        switch(side,
-               left = {
-                   panel.axis(side=side, outside=TRUE, text.cex=0.7,
-                              at=c(1:topImp), labels=taxId)
-               },
-               right = {
-                   panel.axis(side=side, outside=TRUE, text.cex=0.7,
-                              at=c(1:topImp), labels=taxImp)
-               },
-               axis.default(side=side, ...))
-    }
+    if ( is.null(tax.16s)) {
+        plot(imp, top=topImp)
+    } else {
+        taxImp <- tax.16s[taxId]
+        ## this axis function will enable the tax ID to plot on the left side
+        ## of y axis and tax string on the right side.
+        axis.sigmasq <- function(side, ...) {
+            switch(side,
+                   left = {
+                       panel.axis(side=side, outside=TRUE, text.cex=0.7,
+                                  at=c(1:topImp), labels=taxId)
+                   },
+                   right = {
+                       panel.axis(side=side, outside=TRUE, text.cex=0.7,
+                                  at=c(1:topImp), labels=taxImp)
+                   },
+                   axis.default(side=side, ...))
+        }
 
-    ## plot top 10 variable importance
-    plot(imp, top=topImp, axis=axis.sigmasq, ...)
+        ## plot top 10 variable importance
+        plot(imp, top=topImp, axis=axis.sigmasq, ...)
+    }
 }
 
 

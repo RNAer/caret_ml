@@ -1,6 +1,9 @@
 
 library(optparse)
-source('~/softwares/my/ml_util.R')
+args <- commandArgs(trailingOnly = F)
+scriptPath <- normalizePath(dirname(sub("^--file=", "", args[grep("^--file=", args)])))
+
+source(paste(scriptPath, 'ml_util.R', sep='/'))
 
 opt <- interface()
 
@@ -104,12 +107,18 @@ if (! is.null(opt$numeric)) {
 
 otus <- read.table.x(opt$input_otu_table)
 
-
-tax.16s <- otus[, length(otus)]
-tax.16s <- gsub("^Root; ", "", tax.16s)
-## insert a newline for every three levels of taxonomy
-tax.16s <- gsub("([^;]*); ([^;]*); ([^;]*); ", '\\1; \\2; \\3\n', tax.16s)
-names(tax.16s) <- otus[[1]]
+tax.col <- 'taxonomy'
+if (tax.col %in% names(otus)) {
+    tax.16s <- otus[[tax.col]]
+    tax.16s <- gsub("^Root; ", "", tax.16s)
+    ## insert a newline for every three levels of taxonomy
+    tax.16s <- gsub("([^;]*); ([^;]*); ([^;]*); ", '\\1; \\2; \\3\n', tax.16s)
+    names(tax.16s) <- otus[[1]]
+    ## remove tax column
+    otus <- otus[ , names(otus) != tax.col]
+} else {
+    tax.16s <- NULL
+}
 
 
 ## remove the 6-digit suffix of the sample IDs in the mapping file.
