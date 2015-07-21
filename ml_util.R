@@ -1,4 +1,3 @@
-
 interface_generalize <- function() {
     library(optparse)
     meta.fp <- 'mapping_file.txt'
@@ -122,6 +121,9 @@ interface <- function() {
                                     action="store", type="character",
                                     help="Mapping file [default %default]"),
                         make_option(c("-f", "--fields"),  default=NULL,
+                                    action="store", type="character",
+                                    help="Fields or categories to test [default %default]"),
+                        make_option(c("--otus_key"),  default='taxonomy',
                                     action="store", type="character",
                                     help="Fields or categories to test [default %default]"),
                         make_option(c("--replicate"),  default=NULL,
@@ -925,18 +927,16 @@ if (! is.null(opt$numeric)) {
 }
 
 
-otus.2 <- read.table.otus(opt$input_otu_table, quote='"')
+otus.2 <- read.table.otus(opt$input_otu_table, col=opt$otus_key, quote='"')
 otus <- otus.2$otus
+otus.key <- otus.2$col
 
-tax.col <- 'taxonomy'
-if (tax.col %in% names(otus)) {
-    tax.16s <- otus[[tax.col]]
+if (length(otus.key)!=0 & opt$otus_key == 'taxonomy') {
+    tax.16s <- otus.key
     tax.16s <- gsub("^Root; ", "", tax.16s)
     ## insert a newline for every three levels of taxonomy
     tax.16s <- gsub("([^;]*); ([^;]*); ([^;]*); ", '\\1; \\2; \\3\n', tax.16s)
-    names(tax.16s) <- otus[[1]]
-    ## remove tax column
-    otus <- otus[ , names(otus) != tax.col]
+    names(tax.16s) <- colnames(otus)
 } else {
     tax.16s <- NULL
 }
