@@ -700,20 +700,35 @@ regression.tune <- function (trainX, trainY, model, ctrl=NULL, ...) {
 }
 
 y.yhat.ggplot2 <- function(testResults) {
+    ## The testResults is a data.frame that contains observed y as 1st column
+    ## and one or more yhat columns
     require(reshape2)
-    ## The testResults must contain y as 1st column and one or more yhat columns
-    method.names <- names(testResults)
     obs <- testResults[,1]
     ## random predictions by permutating the obs: repeat for 100 times
     rand = replicate(100, sample(obs, size=length(obs), replace=F))
     rand.rmse = apply(rand, 2, caret::RMSE, obs)
+    rand.rmse.mean <- format(round(mean(rand.rmse), 2), nsmall=2)
+    rand.rmse.sd <- format(round(sd(rand.rmse), 2), nsmall=2)
+    rand.rmse.str <- paste('Rand RMSE', '=', rand.rmse.mean, '\u00b1', rand.rmse.sd)
     rand.r2 = apply(rand, 2, caret::R2, obs)
+    rand.r2.mean <- format(round(mean(rand.r2), 2), nsmall=2)
+    rand.r2.sd <- format(round(sd(rand.r2), 2), nsmall=2)
+    rand.r2.str <- paste('Rand R2', '=', rand.r2.mean, '\u00b1', rand.r2.sd)
+
     for(i in 2:length(testResults)) {
         pred <- testResults[,i]
+        rmse <- round(caret::RMSE(pred, obs), 2)
+        rmse.str <- paste('RMSE', '=', rmse)
+        r2 <- round(caret::R2(pred, obs), 2)
+        r2.str <- paste('R2', '=', r2)
         df <- cbind(testResults[, c(1, i)], random=rand[,i])
+        colnames(df)[1] = 'obs'
         df.2 <- melt(df, id = 'obs', value.name='prediction')
         p <- ggplot(df.2, aes(x=obs, y=prediction, color=variable)) +
-                    geom_point(shape=16, size=3) + geom_abline(mapping=aes(slope=1, intercept=0))
+            geom_point(shape=16, size=3) +
+            geom_abline(mapping=aes(slope=1, intercept=0)) +
+            ggtitle(paste(rmse.str, r2.str, rand.rmse.str, rand.r2.str,
+                          sep='\n'))
         print(p)
     }
 }
@@ -931,11 +946,13 @@ otus.2 <- read.table.otus(opt$input_otu_table, col=opt$otus_key, quote='"')
 otus <- otus.2$otus
 otus.key <- otus.2$col
 
-if (length(otus.key)!=0 & opt$otus_key == 'taxonomy') {
+if (length(otus.key)!=0) {
     tax.16s <- otus.key
-    tax.16s <- gsub("^Root; ", "", tax.16s)
-    ## insert a newline for every three levels of taxonomy
-    tax.16s <- gsub("([^;]*); ([^;]*); ([^;]*); ", '\\1; \\2; \\3\n', tax.16s)
+    if (opt$otus_key == 'taxonomy') {
+        tax.16s <- gsub("^Root; ", "", tax.16s)
+        ## insert a newline for every three levels of taxonomy
+        tax.16s <- gsub("([^;]*); ([^;]*); ([^;]*); ", '\\1; \\2; \\3\n', tax.16s)
+    }
     names(tax.16s) <- colnames(otus)
 } else {
     tax.16s <- NULL
