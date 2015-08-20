@@ -171,9 +171,9 @@ interface <- function() {
                         make_option(c("--file"), default=NULL,
                                     action="store", type="character",
                                     help="Add the numeric field in metadata as preditors"),
-                        make_option(c("--balance"), default=FALSE,
-                                    action="store_true", type="logical",
-                                    help="Balance the classes. Only for classification."),
+                        ## make_option(c("--balance"), default=FALSE,
+                        ##             action="store_true", type="logical",
+                        ##             help="Balance the classes. Only for classification."),
                         make_option(c("--feature_selection"), default=FALSE,
                                     action="store_true", type="logical",
                                     help="Do feature selection with RFE? Only support RF currently."),
@@ -771,6 +771,26 @@ y.yhat <- function(testResults) {
     }
 }
 
+cm.result <- function(cm, title, table.fp=NULL, reference=NULL) {
+    ## cm is the output of confusionMatrix from caret
+    cm.table = prop.table(cm$table) * 100
+    a = round(sum(diag(cm.table)), 2)
+    ## cat(a, pred.cm$overall['Accuracy'], '\n')
+    if (! is.null(table.fp)) {
+        write.table(cm.table, table.fp, quote=F, sep='\t')
+    }
+    ## main = paste(fn, a, random.mean, '+/-', random.sdev, sep=' ')
+    if (is.null(reference)) {
+        main = paste(title, a)
+    } else {
+        main = paste(title, a, round(max(table(reference)) * 100 / length(reference), 2), sep=' ')
+    }
+    bb = as.table(t(cm.table)[,nrow(cm.table):1])
+    hm = levelplot(bb, scales=list(x=list(rot=90)),
+                   main=main,
+                   newpage=T)
+    print(hm)
+}
 
 diagnostics <- function(trainX, trainY, testX, testY, sizes=NULL, steps=15, repeats=3,
                         model='rf', metrics=c('RMSE', 'Rsquared')) {
