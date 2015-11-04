@@ -31,7 +31,7 @@ interface_generalize <- function() {
                                         "If no modes are specified, it run all the common models: ",
                                         paste(regression, collapse=', '),
                                         sep='\n\t\t')),
-                        make_option(c("-o", "--output"), default="benchmark",
+                        make_option(c("-o", "--output"), default=NULL,
                                     action="store", type="character",
                                     help="Output file names. [default %default]. It will save pdf and Rdata files."),
                         make_option(c("-c", "--cores"), default=n.cores,
@@ -137,7 +137,7 @@ interface <- function() {
                                         "If no modes are specified, it run all the common models: ",
                                         paste(regression, collapse=', '),
                                         sep='\n\t\t')),
-                        make_option(c("-o", "--output"), default="benchmark",
+                        make_option(c("-o", "--output"), default=NULL,
                                     action="store", type="character",
                                     help="Output file names. [default %default]. It will save pdf and Rdata files."),
                         make_option(c("-c", "--cores"), default=n.cores,
@@ -861,6 +861,36 @@ diagn.plot <- function (diagn, metric) {
     x.p + geom_line() + geom_point(size=3)
 }
 
+plot.rf.roc <- function(models, labels, colors=c('red', 'black'), out='roc.pdf') {
+    ## models is a list of models
+    ## this only apply to random forest model
+    require(caret)
+    require(pROC)
+    pdf(out)
+    for (ii in 1:length(models)) {
+        model = models[[ii]]
+        pred <- model[['pred']]
+        pred.tuned <- pred[ pred[['mtry']] == model[['bestTune']][1,'mtry'], ]
+        response <- factor(pred.tuned[['obs']])
+        prediction <- pred.tuned[[levels(response)[1]]]
+        tuned.roc <- roc(response = response,
+                         predictor = prediction)
+        labels[ii] <- paste(labels[ii], ' (AUC:', round(tuned.roc$auc[1],3), ')', sep='')
+        ## plot(tuned.roc, percent=TRUE)
+        if (ii==1) {
+            plot.roc(response, prediction,
+                     main='ROC', print.thres=seq(0.4, 0.9, 0.1),# print.auc=T,
+                     percent=TRUE, col=colors[ii])
+        } else {
+            lines.roc(response, prediction,
+                      percent=TRUE, col=colors[ii], add=T)
+        }
+    }
+
+    legend("bottomright", legend=labels, col=colors, lwd=2)
+    dev.off()
+}
+
 
 opt <- interface()
 
@@ -1016,7 +1046,17 @@ if (! is.null(opt$add_category)) {
     otus <- cbind(predict(dummy, x), otus)
 }
 
-pdf(sprintf("%s.pdf", opt$output))
+if (is.null(opt$output)){
+    if (! is.null(opt$file)) {
+        output = strsplit(opt$file, '.args')[[1]]
+    } else {
+        output = 'benchmark'
+    }
+} else {
+    output = opt$output
+}
+
+pdf(sprintf("%s.pdf", output))
 
 min.sample.size <- 12
 accuracies <- data.frame()

@@ -127,7 +127,7 @@ for(label in outcome.col) {
 
         }
 
-        save.image(sprintf("%s.Rdata", opt$output))
+        save.image(sprintf("%s.Rdata", output))
 
         ## add a new column - Model
         accu <- rbind(accu, cbind(tuned$resample, Model=tuned$method))
@@ -143,7 +143,7 @@ for(label in outcome.col) {
         pimp <- plot.imp(imp, tax.16s, main=model)
         print(pimp, position=c(0, 0, 0.56, 1))
 
-        save.image(sprintf("%s.Rdata", opt$output))
+        save.image(sprintf("%s.Rdata", output))
     }
     accu$Field <- label
     accuracies <- rbind(accuracies, accu)
@@ -183,4 +183,4 @@ for(label in outcome.col) {
 
 dev.off()
 
-save.image(sprintf("%s.Rdata", opt$output))
+save.image(sprintf("%s.Rdata", output))

@@ -117,7 +117,7 @@ for(label in outcome.col) {
         pimp <- plot.imp(imp, tax.16s, main=paste(label, model))
         print(pimp, position=c(0, 0, 0.56, 1))
 
-        save.image(sprintf("%s.Rdata", opt$output))
+        save.image(sprintf("%s.Rdata", output))
     }
     accu$Field <- label
     accuracies <- rbind(accuracies, accu)
@@ -157,4 +157,4 @@ for(label in outcome.col) {
 
 dev.off()
 
-save.image(sprintf("%s.Rdata", opt$output))
+save.image(sprintf("%s.Rdata", output))
