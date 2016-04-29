@@ -34,6 +34,9 @@ interface_generalize <- function() {
                         make_option(c("-o", "--output"), default=NULL,
                                     action="store", type="character",
                                     help="Output file names. [default %default]. It will save pdf and Rdata files."),
+                        make_option(c("--cv"), default=NULL,
+                                    action="store", type="character",
+                                    help="CV scheme. [default %default]."),
                         make_option(c("-c", "--cores"), default=n.cores,
                                     action="store", type="integer",
                                     help="Number of CPU cores [default %default]"),
@@ -126,6 +129,9 @@ interface <- function() {
                         make_option(c("--otus_key"),  default='taxonomy',
                                     action="store", type="character",
                                     help="Fields or categories to test [default %default]"),
+                        make_option(c("--cv"), default=NULL,
+                                    action="store", type="character",
+                                    help="CV scheme. [default %default]."),
                         make_option(c("--replicate"),  default=NULL,
                                     action="store", type="character",
                                     help="Fields or categories to test [default %default]"),
@@ -266,6 +272,10 @@ classification.tune <- function (trainX, trainY, model, ctrl=NULL, idx=NULL, ...
                                  function(...) c(twoClassSummary(...), defaultSummary(...)) } else defaultSummary,
                              classProbs = TRUE,
                              index = idx,
+                             savePredictions = TRUE)
+    } else if (ctrl == 'loo') {
+        ctrl <- trainControl(method = "LOOCV",
+                             classProbs = TRUE,
                              savePredictions = TRUE)
     }
     tuned <- tryCatch( {
@@ -429,15 +439,15 @@ classification.tune <- function (trainX, trainY, model, ctrl=NULL, idx=NULL, ...
         } else if ('rf'==model) {
             mtryGrid <- data.frame(.mtry = floor(seq(10, ncol(trainX), length = 10)))
             set.seed(10)
-            rfTune<- train(x = trainX,
-                           y = trainY,
-                           method = "rf",
-                           trControl = ctrl,
-                           metric = ifelse(nlevels(trainY) > 2, "Kappa", "ROC"),
-                           ntree = 1000,
-                           tuneGrid = mtryGrid,
-                           importance = TRUE,
-                           ...)
+            rfTune <- train(x = trainX,
+                            y = trainY,
+                            method = "rf",
+                            trControl = ctrl,
+                            metric = ifelse(nlevels(trainY) > 2, "Kappa", "ROC"),
+                            ntree = 1000,
+                            tuneGrid = mtryGrid,
+                            importance = TRUE,
+                            ...)
             plot(rfTune)
             rfTune
         } else if ('gbm'==model) {
@@ -548,7 +558,7 @@ regression.tune <- function (trainX, trainY, model, ctrl=NULL, ...) {
                               y = trainY,
                               method = "svmRadial",
                               tuneGrid = svmRGrid,
-                              ## trControl = ctrl,
+                              trControl = ctrl,
                               tuneLength = 100,
                               preProc = c("center", "scale"),
                               ...)
@@ -595,7 +605,7 @@ regression.tune <- function (trainX, trainY, model, ctrl=NULL, ...) {
                              method = "knn",
                              trControl = ctrl,
                              tuneGrid = data.frame(.k = 1:20),
-                             ## tuneLength = 30,
+                             tuneLength = 5,
                              preProc = c("center", "scale"),
                              ...)
             plot(knnTune)
@@ -659,7 +669,12 @@ regression.tune <- function (trainX, trainY, model, ctrl=NULL, ...) {
             gbmTune
         } else if ("rf" == model) {
             cat("\n---- running random forest...\n")
-            mtryGrid <- data.frame(.mtry = floor(seq(10, ncol(trainX), length = 10)))
+            n <- ncol(trainX)
+            if (n > 20) {
+                mtryGrid <- data.frame(.mtry = floor(seq(10, n, length = 10)))
+            } else {
+                mtryGrid <- data.frame(.mtry = seq(10, n))
+            }
 
             set.seed(10)
             rfTune <- train(x = trainX,
@@ -699,10 +714,21 @@ regression.tune <- function (trainX, trainY, model, ctrl=NULL, ...) {
     tuned
 }
 
+
+rf.cv <- function(model) {
+    ## input is like big.tuned.list$Day$rf
+    mtry <- model$bestTune$mtry
+    pred <- model$pred
+    best.pred <- pred[ pred$mtry==mtry, c('obs', 'pred')]
+    best.pred
+}
+
+
 y.yhat.ggplot2 <- function(testResults) {
     ## The testResults is a data.frame that contains observed y as 1st column
     ## and one or more yhat columns
     require(reshape2)
+    require(ggplot2)
     obs <- testResults[,1]
     ## random predictions by permutating the obs: repeat for 100 times
     rand = replicate(100, sample(obs, size=length(obs), replace=F))
@@ -773,8 +799,9 @@ y.yhat <- function(testResults) {
 
 cm.result <- function(cm, title, table.fp=NULL, reference=NULL) {
     ## cm is the output of confusionMatrix from caret
-    cm.table = prop.table(cm$table) * 100
-    a = round(sum(diag(cm.table)), 2)
+    cm.table = prop.table(cm$table, 2) * 100
+
+    a = round(sum(diag(cm$table)) / sum(cm$table) * 100, 2)
     ## cat(a, pred.cm$overall['Accuracy'], '\n')
     if (! is.null(table.fp)) {
         write.table(cm.table, table.fp, quote=F, sep='\t')
@@ -861,7 +888,8 @@ diagn.plot <- function (diagn, metric) {
     x.p + geom_line() + geom_point(size=3)
 }
 
-plot.rf.roc <- function(models, labels, colors=c('red', 'black'), out='roc.pdf') {
+plot.rf.rocs <- function(models, labels, colors=c('red', 'black'), out='roc.pdf') {
+    ## Plot multiple ROC curves on the same plot.
     ## models is a list of models
     ## this only apply to random forest model
     require(caret)
