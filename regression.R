@@ -131,7 +131,7 @@ for(label in outcome.col) {
     if (length(tuned.list) > 1) {
         ## compare the model performances
         resamp <- resamples(tuned.list)
-        m.diff <- diff(resamp)
+        m.diff <- diff(resamp, metric='RMSE')
         if (opt$verbose) print(summary(m.diff))
         print(dotplot(m.diff, main=label))
     }

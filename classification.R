@@ -114,7 +114,8 @@ for(label in outcome.col) {
         } else {
             save.image('debug.Rdata')
             tuned <- classification.tune(train.full, train.outcome, model, ctrl=opt$cv, idx=idx)
-            cm.plot <- cm.result(tuned, title=paste(label, model))
+            save.image('debug.Rdata')
+            cm.plot <- cm.result(caret::confusionMatrix(tuned), title=paste(label, model))
             print(cm.plot)
             ## if(is.na(tuned) | is.null(tuned)) next
             if (class(tuned) != 'train') {

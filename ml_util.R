@@ -126,7 +126,7 @@ interface <- function() {
                         make_option(c("-f", "--fields"),  default=NULL,
                                     action="store", type="character",
                                     help="Fields or categories to test [default %default]"),
-                        make_option(c("--otus_key"),  default='taxonomy',
+                        make_option(c("--otus_key"),  default=NULL,
                                     action="store", type="character",
                                     help="Fields or categories to test [default %default]"),
                         make_option(c("--cv"), default=NULL,
@@ -724,7 +724,7 @@ rf.cv <- function(model) {
 }
 
 
-y.yhat.ggplot2 <- function(testResults) {
+y.yhat.ggplot2 <- function(testResults, title='') {
     ## The testResults is a data.frame that contains observed y as 1st column
     ## and one or more yhat columns
     require(reshape2)
@@ -753,7 +753,7 @@ y.yhat.ggplot2 <- function(testResults) {
         p <- ggplot(df.2, aes(x=obs, y=prediction, color=variable)) +
             geom_point(shape=16, size=3) +
             geom_abline(mapping=aes(slope=1, intercept=0)) +
-            ggtitle(paste(rmse.str, r2.str, rand.rmse.str, rand.r2.str,
+            ggtitle(paste(title, rmse.str, r2.str, rand.rmse.str, rand.r2.str,
                           sep='\n'))
         print(p)
     }
@@ -887,6 +887,7 @@ diagn.plot <- function (diagn, metric) {
     }
     x.p + geom_line() + geom_point(size=3)
 }
+
 
 plot.rf.rocs <- function(models, labels, colors=c('red', 'black'), out='roc.pdf') {
     ## Plot multiple ROC curves on the same plot.
